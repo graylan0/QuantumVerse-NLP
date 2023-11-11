@@ -94,8 +94,14 @@ tokenizer = GPT2Tokenizer.from_pretrained('EleutherAI/gpt-neo-125m')
 tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 model.config.pad_token_id = tokenizer.pad_token_id
 
-def quantum_influenced_logits(params, logits):
-    quantum_probs = quantum_circuit(params, "#ff0000", 0.5)
+def quantum_influenced_logits(params, logits, emotion):
+    # Generate color code based on emotion using Llama model
+    color_code = generate_color_code(emotion)
+    
+    # Calculate quantum probabilities using the generated color code
+    quantum_probs = quantum_circuit(params, color_code, 0.5)
+    
+    # Adjust logits with quantum probabilities
     adjusted_logits = logits * quantum_probs
     return adjusted_logits
 
