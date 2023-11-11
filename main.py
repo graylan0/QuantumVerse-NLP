@@ -21,26 +21,39 @@ logger = logging.getLogger(__name__)
 DB_NAME = "quantum_ai.db"
 
 async def init_db():
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS responses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                trideque_point INT,
-                response TEXT
-            )
-        """)
-        await db.commit()
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS responses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    trideque_point INT,
+                    response TEXT
+                )
+            """)
+            await db.commit()
+    except Exception as e:
+        print(f"An error occurred while initializing the database: {e}")
+        # Log the error or handle it in a way that is appropriate for your application
 
 async def insert_response(trideque_point, response):
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("INSERT INTO responses (trideque_point, response) VALUES (?, ?)", (trideque_point, response))
-        await db.commit()
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            await db.execute("INSERT INTO responses (trideque_point, response) VALUES (?, ?)", (trideque_point, response))
+            await db.commit()
+    except Exception as e:
+        print(f"An error occurred while inserting a response into the database: {e}")
+        # Log the error or handle it in a way that is appropriate for your application
 
 async def query_responses(trideque_point):
-    async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("SELECT response FROM responses WHERE trideque_point = ?", (trideque_point,))
-        rows = await cursor.fetchall()
-        return rows
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            cursor = await db.execute("SELECT response FROM responses WHERE trideque_point = ?", (trideque_point,))
+            rows = await cursor.fetchall()
+            return rows
+    except Exception as e:
+        print(f"An error occurred while querying responses from the database: {e}")
+        # Log the error or handle it in a way that is appropriate for your application
+        return []
 
 qml_model = qml.device("default.qubit", wires=4)
 
@@ -67,8 +80,26 @@ def generate_color_code(emotion):
     color_code = task_response.split()[-1]
     return color_code
 
+def color_code_to_quantum_state(color_code):
+    # Convert color code to RGB values
+    r, g, b = [int(color_code[i:i+2], 16) for i in (1, 3, 5)]
+
+    # Normalize RGB values to a range suitable for your quantum circuit
+    # Here, we normalize them to be between 0 and 1
+    r_norm, g_norm, b_norm = r / 255.0, g / 255.0, b / 255.0
+
+    # Example: Create a simple probability distribution based on normalized RGB values
+    # The logic here can be adjusted based on how you want the colors to influence the state
+    total = r_norm + g_norm + b_norm
+    if total == 0:
+        return [0.25, 0.25, 0.25, 0.25]  # Equal distribution if color is black or invalid
+    else:
+        return [r_norm / total, g_norm / total, b_norm / total, (1 - (r_norm + g_norm + b_norm) / total)]
+
+# Modify the cost function to use this new method
 def cost_function(params, emotion):
     color_code = generate_color_code(emotion)
+    desired_output = color_code_to_quantum_state(color_code)
     circuit_output = quantum_circuit(params, color_code, 0.5)
     return np.sum(np.abs(circuit_output - desired_output))
 
@@ -190,22 +221,34 @@ client = weaviate.Client(
     url="https://blessed-perfect-mollusk.ngrok-free.app/",
 )
 
-async def retrieve_movie_frames_by_theme(theme):
-    query = {
-        "query": {
-            "nearText": {
-                "concepts": [theme],
-                "certainty": 0.7,
-                "limit": 5
-            }
-        }
+async def insert_into_weaviate(frame_num, frame_text, summary, quantum_cookie, commands):
+    data_object = {
+        "frameNum": frame_num,
+        "frameText": frame_text,
+        "summary": summary,
+        "quantumCookie": quantum_cookie,
+        "commands": commands
     }
-    response = await client.query(query)
-    return response
+    try:
+        await client.data_object.create(data_object, class_name="MovieFrame")
+    except Exception as e:
+        logger.error(f"Failed to insert data into Weaviate: {e}")
+
+async def retrieve_movie_frames_by_theme(theme):
+    try:
+        result = await client.query.get("MovieFrame", ["frameNum", "frameText", "summary", "quantumCookie", "commands"]).with_near_text({
+            "concepts": [theme],
+            "certainty": 0.7
+        }).do()
+        return result['data']['Get']['MovieFrame'] if result['data']['Get']['MovieFrame'] else []
+    except Exception as e:
+        logger.error(f"An error occurred while retrieving frames: {e}")
+        return []
 
 def process_movie_frames(theme):
     frames = asyncio.run(retrieve_movie_frames_by_theme(theme))
     for frame in frames:
+        # Process each frame as needed
         pass
 
 def generate_llama_response(prompt):
@@ -293,5 +336,4 @@ loop_count = 5
 threading.Thread(target=main_loop, daemon=True).start()
 
 root.mainloop()
-
 
