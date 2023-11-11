@@ -71,8 +71,17 @@ def quantum_circuit(params, color_code, amplitude):
     qml.CNOT(wires=[2, 3])
     return qml.probs(wires=[0, 1, 2, 3])
 
-def cost_function(params):
-    return np.sum(np.abs(quantum_circuit(params, "#ff0000", 0.5)))
+def generate_color_code(emotion):
+    task_prompt = f"Please generate an HTML color code that best represents the emotion: {emotion}."
+    task_response = llm.generate(task_prompt)
+    # Extract color code from the response
+    color_code = task_response.split()[-1]  # Assuming the color code is the last word in the response
+    return color_code
+
+def cost_function(params, emotion):
+    color_code = generate_color_code(emotion)
+    circuit_output = quantum_circuit(params, color_code, 0.5)
+    return np.sum(np.abs(circuit_output - desired_output))
 
 initial_params = np.random.rand(3)
 result = minimize(cost_function, initial_params, method='Powell')
@@ -102,7 +111,27 @@ def generate_multiversal_trideque(num_points=10, num_topics_per_point=5):
     return trideque
 
 trideque = generate_multiversal_trideque()
+def merge_and_enhance_responses(gpt_response, llama_response):
+    # Combine responses
+    combined_response = f"{gpt_response} {llama_response}"
 
+    # Apply quantum logits adjustment (assuming you have a function for this)
+    adjusted_response = apply_quantum_logits_adjustment(combined_response)
+
+    return adjusted_response
+
+def apply_quantum_logits_adjustment(text):
+    # Convert text to logits using a tokenizer
+    inputs = tokenizer.encode(text, return_tensors='pt', truncation=True, max_length=512).to(device)
+    logits = model(inputs).logits
+
+    # Apply quantum-influenced adjustment
+    quantum_probs = quantum_circuit(optimal_params, "#ff0000", 0.5)
+    adjusted_logits = logits * quantum_probs
+
+    # Convert logits back to text
+    adjusted_text = tokenizer.decode(adjusted_logits[0])
+    return adjusted_text
 def generate_chunks(prompt, chunk_size=1500):
     words = prompt.split()
     return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
@@ -198,22 +227,22 @@ def process_movie_frames(theme):
 
 def generate_llama_response(prompt):
     response = llm.generate(prompt)
-    return response
+    summarized_response = summarizer.summarize(response)
+    return summarized_response
 
 def handle_user_request(request):
-    pass
+    # Generate responses from both models
+    gpt_response = gpt3_generate(model, tokenizer, request)
+    llama_response = generate_llama_response(request)
+
+    # Merge and enhance responses
+    final_response = merge_and_enhance_responses(gpt_response, llama_response)
+
+    return final_response
 
 def handle_system_event(event):
     pass
 
-while True:
-    user_request = check_for_user_request()
-    if user_request:
-        handle_user_request(user_request)
-
-    system_event = check_for_system_event()
-    if system_event:
-        handle_system_event(system_event)
 
 def check_for_user_request():
     pass
@@ -221,30 +250,31 @@ def check_for_user_request():
 def check_for_system_event():
     pass
 
-root = Tk()
-root.title("Quantum-AI Integration System")
 
-trideque_point_input = Entry(root)
-trideque_point_input.pack()
+    root = Tk()
+    root.title("Quantum-AI Integration System")
 
-generate_button = Button(root, text="Generate", command=on_generate_click)
-generate_button.pack()
+    trideque_point_input = Entry(root)
+    trideque_point_input.pack()
 
-stop_loop_button = Button(root, text="Stop Loop", command=on_stop_loop_click)
-stop_loop_button.pack()
+    generate_button = Button(root, text="Generate", command=on_generate_click)
+    generate_button.pack()
 
-output_text = Text(root)
-output_text.pack(side=TOP, fill=BOTH)
+    stop_loop_button = Button(root, text="Stop Loop", command=on_stop_loop_click)
+    stop_loop_button.pack()
 
-scrollbar = Scrollbar(root)
-scrollbar.pack(side=RIGHT, fill=Y)
+    output_text = Text(root)
+    output_text.pack(side=TOP, fill=BOTH)
 
-scrollbar.config(command=output_text.yview)
-output_text.config(yscrollcommand=scrollbar.set)
+    scrollbar = Scrollbar(root)
+    scrollbar.pack(side=RIGHT, fill=Y)
 
-stop_loop = False
-loop_count = 5
+    scrollbar.config(command=output_text.yview)
+    output_text.config(yscrollcommand=scrollbar.set)
 
-root.mainloop()
+    stop_loop = False
+    loop_count = 5
+
+    root.mainloop()
 
 
