@@ -59,10 +59,3 @@ python main.py
 | `gpt3_generate`    | Function for text generation         |
 | `GUI`              | Code for the graphical user interface|
 
-## Contributing
-
-Contributions are welcome! Please read our [Contribution Guidelines](#) for more information.
-
----
-
-This document provides a structured and visually appealing overview of your project, making it accessible and understandable for potential contributors and users.
