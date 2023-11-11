@@ -15,8 +15,21 @@ import weaviate
 from concurrent.futures import ThreadPoolExecutor
 from summa import summarizer
 
-logging.basicConfig(level=logging.INFO)
+
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+llm = Llama(
+    model_path="llama-2-7b-chat.ggmlv3.q8_0.bin",
+    n_gpu_layers=-1,
+    n_ctx=3900,
+)
+
+executor = ThreadPoolExecutor(max_workers=3)
+
+client = weaviate.Client(
+    url="https://blessed-perfect-mollusk.ngrok-free.app/",
+)
 
 DB_NAME = "quantum_ai.db"
 
@@ -206,20 +219,6 @@ def on_stop_loop_click():
     global stop_loop
     stop_loop = True
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-llm = Llama(
-    model_path="llama-2-7b-chat.ggmlv3.q8_0.bin",
-    n_gpu_layers=-1,
-    n_ctx=3900,
-)
-
-executor = ThreadPoolExecutor(max_workers=3)
-
-client = weaviate.Client(
-    url="https://blessed-perfect-mollusk.ngrok-free.app/",
-)
 
 async def insert_into_weaviate(frame_num, frame_text, summary, quantum_cookie, commands):
     data_object = {
