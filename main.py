@@ -3,7 +3,7 @@ import time
 import random
 import numpy as np
 import pennylane as qml
-from tkinter import Tk, Label, Entry, Button, Text, Scrollbar, Y, RIGHT, END, TOP, BOTH
+from tkinter import Tk, Entry, Button, Text, Scrollbar, TOP, BOTH, END, RIGHT, Y
 from transformers import GPTNeoForCausalLM, GPT2Tokenizer
 import threading
 from scipy.optimize import minimize
@@ -21,36 +21,26 @@ logger = logging.getLogger(__name__)
 DB_NAME = "quantum_ai.db"
 
 async def init_db():
-    try:
-        async with aiosqlite.connect(DB_NAME) as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS responses (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    trideque_point INT,
-                    response TEXT
-                )
-            """)
-            await db.commit()
-    except Exception as e:
-        logger.error(f"Error initializing database: {e}")
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS responses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trideque_point INT,
+                response TEXT
+            )
+        """)
+        await db.commit()
 
 async def insert_response(trideque_point, response):
-    try:
-        async with aiosqlite.connect(DB_NAME) as db:
-            await db.execute("INSERT INTO responses (trideque_point, response) VALUES (?, ?)", (trideque_point, response))
-            await db.commit()
-    except aiosqlite.Error as e:
-        logger.error(f"Error inserting response: {e}")
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("INSERT INTO responses (trideque_point, response) VALUES (?, ?)", (trideque_point, response))
+        await db.commit()
 
 async def query_responses(trideque_point):
-    try:
-        async with aiosqlite.connect(DB_NAME) as db:
-            cursor = await db.execute("SELECT response FROM responses WHERE trideque_point = ?", (trideque_point,))
-            rows = await cursor.fetchall()
-            return rows
-    except aiosqlite.Error as e:
-        logger.error(f"Error querying responses: {e}")
-        return []
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("SELECT response FROM responses WHERE trideque_point = ?", (trideque_point,))
+        rows = await cursor.fetchall()
+        return rows
 
 qml_model = qml.device("default.qubit", wires=4)
 
@@ -74,8 +64,7 @@ def quantum_circuit(params, color_code, amplitude):
 def generate_color_code(emotion):
     task_prompt = f"Please generate an HTML color code that best represents the emotion: {emotion}."
     task_response = llm.generate(task_prompt)
-    # Extract color code from the response
-    color_code = task_response.split()[-1]  # Assuming the color code is the last word in the response
+    color_code = task_response.split()[-1]
     return color_code
 
 def cost_function(params, emotion):
@@ -95,13 +84,8 @@ tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 model.config.pad_token_id = tokenizer.pad_token_id
 
 def quantum_influenced_logits(params, logits, emotion):
-    # Generate color code based on emotion using Llama model
     color_code = generate_color_code(emotion)
-    
-    # Calculate quantum probabilities using the generated color code
     quantum_probs = quantum_circuit(params, color_code, 0.5)
-    
-    # Adjust logits with quantum probabilities
     adjusted_logits = logits * quantum_probs
     return adjusted_logits
 
@@ -117,27 +101,20 @@ def generate_multiversal_trideque(num_points=10, num_topics_per_point=5):
     return trideque
 
 trideque = generate_multiversal_trideque()
+
 def merge_and_enhance_responses(gpt_response, llama_response):
-    # Combine responses
     combined_response = f"{gpt_response} {llama_response}"
-
-    # Apply quantum logits adjustment (assuming you have a function for this)
     adjusted_response = apply_quantum_logits_adjustment(combined_response)
-
     return adjusted_response
 
 def apply_quantum_logits_adjustment(text):
-    # Convert text to logits using a tokenizer
     inputs = tokenizer.encode(text, return_tensors='pt', truncation=True, max_length=512).to(device)
     logits = model(inputs).logits
-
-    # Apply quantum-influenced adjustment
     quantum_probs = quantum_circuit(optimal_params, "#ff0000", 0.5)
     adjusted_logits = logits * quantum_probs
-
-    # Convert logits back to text
     adjusted_text = tokenizer.decode(adjusted_logits[0])
     return adjusted_text
+
 def generate_chunks(prompt, chunk_size=1500):
     words = prompt.split()
     return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
@@ -237,18 +214,13 @@ def generate_llama_response(prompt):
     return summarized_response
 
 def handle_user_request(request):
-    # Generate responses from both models
     gpt_response = gpt3_generate(model, tokenizer, request)
     llama_response = generate_llama_response(request)
-
-    # Merge and enhance responses
     final_response = merge_and_enhance_responses(gpt_response, llama_response)
-
     return final_response
 
 def handle_system_event(event):
     pass
-
 
 def check_for_user_request():
     pass
@@ -256,31 +228,70 @@ def check_for_user_request():
 def check_for_system_event():
     pass
 
+# Additional Functions
+def update_database_with_response(trideque_point, response):
+    asyncio.run(insert_response(trideque_point, response))
 
-    root = Tk()
-    root.title("Quantum-AI Integration System")
+def retrieve_responses_from_database(trideque_point):
+    return asyncio.run(query_responses(trideque_point))
 
-    trideque_point_input = Entry(root)
-    trideque_point_input.pack()
+def quantum_decision_making(input_text):
+    decision_factors = np.random.rand(3)
+    quantum_decision = "Quantum Affirmative" if np.mean(decision_factors) > 0.5 else "Quantum Negative"
+    return f"Quantum Decision: {quantum_decision}. "
 
-    generate_button = Button(root, text="Generate", command=on_generate_click)
-    generate_button.pack()
+def multiversal_response_integration(input_text):
+    multiverse_factors = ["Multiverse A", "Multiverse B", "Multiverse C"]
+    chosen_multiverse = random.choice(multiverse_factors)
+    return f"Response from {chosen_multiverse}: {input_text}"
 
-    stop_loop_button = Button(root, text="Stop Loop", command=on_stop_loop_click)
-    stop_loop_button.pack()
+def process_user_input(input_text):
+    # Process the input text with various functions
+    quantum_decision = quantum_decision_making(input_text)
+    multiversal_response = multiversal_response_integration(input_text)
+    return f"{quantum_decision} {multiversal_response}"
 
-    output_text = Text(root)
-    output_text.pack(side=TOP, fill=BOTH)
+def main_loop():
+    while True:
+        user_request = check_for_user_request()
+        if user_request:
+            response = handle_user_request(user_request)
+            output_text.insert(END, f"Response: {response}\n")
 
-    scrollbar = Scrollbar(root)
-    scrollbar.pack(side=RIGHT, fill=Y)
+        system_event = check_for_system_event()
+        if system_event:
+            handle_system_event(system_event)
 
-    scrollbar.config(command=output_text.yview)
-    output_text.config(yscrollcommand=scrollbar.set)
+        time.sleep(1)  # Adjust as needed
 
-    stop_loop = False
-    loop_count = 5
+# GUI Setup
+root = Tk()
+root.title("Quantum-AI Integration System")
 
-    root.mainloop()
+trideque_point_input = Entry(root)
+trideque_point_input.pack()
+
+generate_button = Button(root, text="Generate", command=on_generate_click)
+generate_button.pack()
+
+stop_loop_button = Button(root, text="Stop Loop", command=on_stop_loop_click)
+stop_loop_button.pack()
+
+output_text = Text(root)
+output_text.pack(side=TOP, fill=BOTH)
+
+scrollbar = Scrollbar(root)
+scrollbar.pack(side=RIGHT, fill=Y)
+
+scrollbar.config(command=output_text.yview)
+output_text.config(yscrollcommand=scrollbar.set)
+
+stop_loop = False
+loop_count = 5
+
+# Start the main loop in a separate thread
+threading.Thread(target=main_loop, daemon=True).start()
+
+root.mainloop()
 
 
