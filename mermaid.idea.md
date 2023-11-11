@@ -1,4 +1,4 @@
-graph TD
+```graph TD
     A[User Interface] -->|User Input| B[Input Processor]
     B -->|Processed Input| C[Advanced Quantum Circuit]
     C -->|Quantum Parameters| D1[Quantum Data Encoder]
