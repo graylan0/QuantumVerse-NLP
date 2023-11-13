@@ -94,22 +94,14 @@ def generate_color_code(emotion):
     return color_code
 
 def color_code_to_quantum_state(color_code):
-    # Convert color code to RGB values
     r, g, b = [int(color_code[i:i+2], 16) for i in (1, 3, 5)]
-
-    # Normalize RGB values to a range suitable for your quantum circuit
-    # Here, we normalize them to be between 0 and 1
     r_norm, g_norm, b_norm = r / 255.0, g / 255.0, b / 255.0
-
-    # Example: Create a simple probability distribution based on normalized RGB values
-    # The logic here can be adjusted based on how you want the colors to influence the state
     total = r_norm + g_norm + b_norm
     if total == 0:
         return [0.25, 0.25, 0.25, 0.25]  # Equal distribution if color is black or invalid
     else:
         return [r_norm / total, g_norm / total, b_norm / total, (1 - (r_norm + g_norm + b_norm) / total)]
 
-# Modify the cost function to use this new method
 def cost_function(params, emotion):
     color_code = generate_color_code(emotion)
     desired_output = color_code_to_quantum_state(color_code)
@@ -247,7 +239,6 @@ async def retrieve_movie_frames_by_theme(theme):
 def process_movie_frames(theme):
     frames = asyncio.run(retrieve_movie_frames_by_theme(theme))
     for frame in frames:
-        # Process each frame as needed
         pass
 
 def generate_llama_response(prompt):
@@ -270,7 +261,6 @@ def check_for_user_request():
 def check_for_system_event():
     pass
 
-# Additional Functions
 def update_database_with_response(trideque_point, response):
     asyncio.run(insert_response(trideque_point, response))
 
@@ -304,9 +294,8 @@ def main_loop():
         if system_event:
             handle_system_event(system_event)
 
-        time.sleep(1)  # Adjust as needed
+        time.sleep(1) 
 
-# GUI Setup
 root = Tk()
 root.title("Quantum-AI Integration System")
 
@@ -331,7 +320,6 @@ output_text.config(yscrollcommand=scrollbar.set)
 stop_loop = False
 loop_count = 5
 
-# Start the main loop in a separate thread
 threading.Thread(target=main_loop, daemon=True).start()
 
 root.mainloop()
